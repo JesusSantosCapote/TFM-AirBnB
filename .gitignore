@@ -1,1 +1,3 @@
-./scrappers/origin_data_scrapper/data/
+scrappers/origin_data_scrapper/data/
+etl_pipelines/dwh_data/data/
+etl_pipelines/logs
