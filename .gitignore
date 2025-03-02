@@ -1,3 +1,20 @@
 scrappers/origin_data_scrapper/data/
 etl_pipelines/dwh_data/data/
 etl_pipelines/logs
+etl_pipelines/dags/data
+etl_pipelines/dags/stg_cleansed_data
+
+# Byte-compiled files
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+
+# IDE-specific files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
