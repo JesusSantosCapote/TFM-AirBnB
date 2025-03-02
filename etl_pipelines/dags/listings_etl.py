@@ -15,6 +15,11 @@ def etl_listings():
     target_schema = os.getenv("STG_SCHEMA")
     target_table = os.getenv("LISTINGS_STG_TABLE_NAME")
 
+    stg_clean_listing_data_path = os.getenv("STG_CLEANSED_DATA_PATH")
+    listing_file_path = os.path.join(stg_clean_listing_data_path, f"{target_table}.csv")
+    if os.path.exists(listing_file_path):
+        os.remove(listing_file_path)
+
     engine = create_engine(target_db_connection_string)
 
     inspector = inspect(engine)
@@ -64,9 +69,8 @@ def etl_listings():
                     df = df.drop(columns=["host_name"])
 
                     #Load to target
-                    csv_path = os.path.join(os.getenv("STG_CLEANSED_DATA_PATH"), f"{target_table}.csv")
-                    file_exists = os.path.exists(csv_path)
-                    df.to_csv(csv_path, mode='a', index=False, header=not file_exists)
+                    file_exists = os.path.exists(listing_file_path)
+                    df.to_csv(listing_file_path, mode='a', index=False, header=not file_exists)
 
 
 def load_data():
