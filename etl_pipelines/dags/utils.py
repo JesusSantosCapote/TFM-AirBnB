@@ -3,20 +3,16 @@ from sqlalchemy import (
 )
 from sqlalchemy.engine.url import make_url
 
+
 def create_listings_table(db_url, schema_name, table_name):
-    """Crea la tabla 'listings' en un esquema específico de PostgreSQL si no existe."""
-    
-    # Crear motor y metadatos
     engine = create_engine(db_url)
     metadata = MetaData(schema=schema_name)  # Especificar el esquema
 
-    # Definir la tabla
     listings_table = Table(
         table_name, metadata,
         Column("id", BigInteger, primary_key=True),
         Column("name", String(255)),
         Column("host_id", BigInteger),
-        Column("host_name", String(255)),
         Column("neighbourhood_group", String(255), nullable=True),
         Column("neighbourhood", String(255)),
         Column("latitude", Numeric(9, 6)),
@@ -36,6 +32,42 @@ def create_listings_table(db_url, schema_name, table_name):
         Column("country", String(255)),
         Column("continent", String(255)),
         Column("etl_loaded_at", DateTime(255))
+    )
+
+    # Crear la tabla en el esquema especificado
+    metadata.create_all(engine)
+
+
+def create_reviews_table(db_url, schema_name, table_name):
+    engine = create_engine(db_url)
+    metadata = MetaData(schema=schema_name)  # Especificar el esquema
+
+    reviews_table = Table(
+        table_name, metadata,
+        Column("listing_id", BigInteger, primary_key=True),
+        Column("id", BigInteger, nullable=True),
+        Column("date", String(255), nullable=True),
+        Column("reviewer_id", BigInteger, nullable=True),
+        Column("comments", Text, nullable=True)
+    )
+
+    # Crear la tabla en el esquema especificado
+    metadata.create_all(engine)
+
+
+def create_calendar_table(db_url, schema_name, table_name):
+    engine = create_engine(db_url)
+    metadata = MetaData(schema=schema_name)  # Especificar el esquema
+
+    calendar_table = Table(
+        table_name, metadata,
+        Column("listing_id", BigInteger, primary_key=True),
+        Column("date", String(255), nullable=True),
+        Column("available", Boolean, nullable=True),
+        Column("price_dollar", Numeric, nullable=True),
+        Column("adjusted_price_dollar", Numeric, nullable=True),
+        Column("minimum_nights", Numeric, nullable=True),
+        Column("maximum_nights", Numeric, nullable=True)
     )
 
     # Crear la tabla en el esquema especificado

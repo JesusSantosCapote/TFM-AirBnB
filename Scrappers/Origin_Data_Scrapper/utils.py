@@ -28,6 +28,9 @@ def download_file(url, directory, filename=None, retries=3, wait_time=2):
     if not filename:
         filename = url.split("/")[-1]
     
+    if ("listings" in filename or "reviews" in filename) and ".gz" not in filename:
+        filename = "summary_" + filename
+
     path = os.path.join(directory, filename)
 
     for attempt in range(1, retries + 1):

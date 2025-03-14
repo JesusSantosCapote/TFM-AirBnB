@@ -1,6 +1,6 @@
 import os
 
-DESIRED_COUNTRIES = ['Canada']
+DESIRED_COUNTRIES = ['Canada', 'Mexico']
 
 PWD = os.path.join(os.getcwd(), "data")
 

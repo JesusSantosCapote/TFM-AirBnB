@@ -9,7 +9,7 @@ from sqlalchemy.engine.url import make_url
 from utils import create_listings_table
 from loader_factory import LoaderFactory
 
-def etl_listings():
+def extract_transform_listings():
     continent_path = Path(os.getenv("ORIGIN_DATA_PATH"))
     target_db_connection_string = os.getenv("DWH_CONN_STRING")
     target_schema = os.getenv("STG_SCHEMA")
@@ -41,9 +41,9 @@ def etl_listings():
                 cities = [d.name for d in cities_path.iterdir() if d.is_dir()]
 
                 for city in cities:
-                    listing_path = cities_path.joinpath(city, "listings.csv")
+                    listing_path = cities_path.joinpath(city, "summary_listings.csv")
 
-                    df = pd.read_csv(listing_path, quotechar='"')
+                    df = pd.read_csv(listing_path, compression=None, quotechar='"')
 
                     #Drop duplicates by id
                     df.drop_duplicates(subset=["id"], inplace=True)
@@ -104,7 +104,7 @@ with DAG(
     catchup=False,
 ) as dag:
 
-    extract_transform_listings = PythonOperator(task_id="stg_listing_extract_transform", python_callable=etl_listings)
+    extract_transform_listings = PythonOperator(task_id="stg_listing_extract_transform", python_callable=extract_transform_listings)
     load_data_listings = PythonOperator(task_id="stg_listing_load", python_callable=load_data)
 
     extract_transform_listings >> load_data_listings

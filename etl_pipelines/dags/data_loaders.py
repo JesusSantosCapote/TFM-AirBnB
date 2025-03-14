@@ -41,6 +41,6 @@ class PostgresLoader(DataLoader):
             print("Error: %s" % error)
             conn.rollback()
             cursor.close()
-            return 1
+            raise error
         cursor.close()
   
