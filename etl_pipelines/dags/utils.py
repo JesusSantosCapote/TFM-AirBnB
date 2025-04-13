@@ -1,8 +1,7 @@
 from sqlalchemy import (
     create_engine, MetaData, Table, Column, Integer, BigInteger, String, Text, Date, Numeric, Boolean, DateTime
 )
-from sqlalchemy.engine.url import make_url
-
+import psycopg2
 
 def create_listings_table(db_url, schema_name, table_name):
     engine = create_engine(db_url)

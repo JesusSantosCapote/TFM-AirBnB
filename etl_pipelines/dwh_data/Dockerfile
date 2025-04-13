@@ -1,4 +1,4 @@
-FROM postgres:13
+FROM postgis/postgis
 
 # Variables de entorno para la configuración de PostgreSQL
 ENV POSTGRES_USER=postgres
