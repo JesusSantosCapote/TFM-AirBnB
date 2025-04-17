@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import psycopg2 
 import psycopg2.extras as extras
-
+import pandas as pd
 class DataLoader(ABC):
     @abstractmethod
     def load_data(self, df, target_schema, target_table, db, user, password, host, port, conflict_strategy):
@@ -17,7 +17,8 @@ class PostgresLoader(DataLoader):
             port=port
         )
         
-        tuples = [tuple(x) for x in df.to_numpy()]
+        tuples = [tuple(None if pd.isna(x) else x for x in row) for row in df.itertuples(index=False)]
+
         cols = ','.join(list(df.columns))
 
         if conflict_strategy == "ignore":

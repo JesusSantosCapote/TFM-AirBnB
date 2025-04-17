@@ -8,6 +8,7 @@ from sqlalchemy import create_engine, inspect
 from sqlalchemy.engine.url import make_url
 from utils import create_listings_table
 from loader_factory import LoaderFactory
+import numpy as np
 
 def extract_transform_listings():
     continent_path = Path(os.getenv("ORIGIN_DATA_PATH"))
@@ -27,7 +28,6 @@ def extract_transform_listings():
     if target_table not in inspector.get_table_names(schema=target_schema):
         create_listings_table(target_db_connection_string, target_schema, target_table)
 
-
     for continent in [d.name for d in continent_path.iterdir() if d.is_dir()]:
         countries_path = continent_path.joinpath(continent)
         countries = [d.name for d in countries_path.iterdir() if d.is_dir()]
@@ -41,36 +41,75 @@ def extract_transform_listings():
                 cities = [d.name for d in cities_path.iterdir() if d.is_dir()]
 
                 for city in cities:
-                    listing_path = cities_path.joinpath(city, "summary_listings.csv")
+                    listing_path = cities_path.joinpath(city, "listings.csv.gz")
+                    df = pd.read_csv(listing_path, compression="gzip", quotechar='"')
 
-                    df = pd.read_csv(listing_path, compression=None, quotechar='"')
-
-                    #Drop duplicates by id
+                    # Drop duplicates by id
                     df.drop_duplicates(subset=["id"], inplace=True)
 
-                    #Lower categorical variables
-                    df["room_type"] = df["room_type"].fillna("unknown").astype(str).str.lower()
-                    df["license"] = df["license"].fillna("unknown").astype(str).str.lower()
-                    df["neighbourhood_group"] = df["neighbourhood_group"].fillna("unknown").astype(str).str.lower()
-                    
-                    df["last_review"] = df["last_review"].astype(str)  # Convertir a string para evitar NaN como float
-                    df["last_review"] = df["last_review"].replace("nan", None)  # Reemplazar "nan" string con None
+                    # Deleting $
+                    df["price"] = df["price"].astype(str).str.replace(r"[$,]", "", regex=True).astype(float)
+                    df.rename(columns={"price": "price_dollar"}, inplace=True)
 
-                    #Add new gegrafic columns
+                    # Transform to bool
+                    df["instant_bookable"] = df["instant_bookable"].map({"t": 1, "f": 0})
+                    df["host_is_superhost"] = df["host_is_superhost"].map({"t": 1, "f": 0})
+                    df["has_availability"] = df["has_availability"].map({"t": 1, "f": 0})
+                    df["host_has_profile_pic"] = df["host_has_profile_pic"].map({"t": 1, "f": 0})
+                    df["host_identity_verified"] = df["host_identity_verified"].map({"t": 1, "f": 0})
+
+                    # Deleting %
+                    df["host_response_rate"] = (
+                        df["host_response_rate"]
+                        .astype(str)
+                        .str.replace(r"%", "", regex=True)
+                        .apply(lambda x: int(x) if x.isdigit() else None)
+                    )
+
+                    df["host_acceptance_rate"] = (
+                        df["host_acceptance_rate"]
+                        .astype(str)
+                        .str.replace(r"%", "", regex=True)
+                        .apply(lambda x: int(x) if x.isdigit() else None)
+                    )
+                    df.rename(columns={"host_response_rate": "host_response_rate_percentage",
+                                       "host_acceptance_rate": "host_acceptance_rate_percentage"}, inplace=True)
+
+                    # Lower categorical variables
+                    df["source"] = df["source"].astype(str).str.lower()
+                    df["host_response_time"] = df["host_response_time"].astype(str).str.lower()
+                    df["property_type"] = df["property_type"].astype(str).str.lower()
+                    df["room_type"] = df["room_type"].astype(str).str.lower()
+                    df["license"] = df["license"].astype(str).str.lower()
+
+                    # Add new gegrafic columns
                     df["city"] = city
                     df["province"] = province
                     df["country"] = country
                     df["continent"] = continent
 
-                    #Add load date
+                    # Add load date
                     df["etl_loaded_at"] = datetime.now()
 
-                    #Drop private info of the host
-                    df = df.drop(columns=["host_name"])
+                    # Drop private info of the host
+                    df = df.drop(
+                        columns=["host_name", "host_location", "host_about", "host_thumbnail_url", "host_picture_url",
+                                 "host_neighbourhood"])
 
-                    #Load to target
-                    file_exists = os.path.exists(listing_file_path)
-                    df.to_csv(listing_file_path, mode='a', index=False, header=not file_exists)
+                    df = df.drop(
+                        columns=[
+                            "minimum_minimum_nights",
+                            "maximum_minimum_nights",
+                            "minimum_maximum_nights",
+                            "maximum_maximum_nights",
+                            "minimum_nights_avg_ntm",
+                            "maximum_nights_avg_ntm"]
+                    )
+
+                    # Load to target
+                    csv_path = os.path.join(os.getenv("STG_CLEANSED_DATA_PATH"), f"{target_table}.csv")
+                    file_exists = os.path.exists(csv_path)
+                    df.to_csv(csv_path, mode='a', index=False, header=not file_exists, na_rep="NULL")
 
 
 def load_data():
