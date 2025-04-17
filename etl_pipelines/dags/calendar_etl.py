@@ -72,9 +72,7 @@ def load_data():
 
     data_loader = LoaderFactory.get_loader(dwh_db_type)
 
-    chunk_size = 100000  # Number of rows per chunk
-
-    print(csv_path)
+    chunk_size = 10000000  # Number of rows per chunk
 
     # Read and process the CSV file in chunks
     for chunk in pd.read_csv(csv_path, quotechar='"', low_memory=False, chunksize=chunk_size):
@@ -96,7 +94,7 @@ default_args = {
     "owner": "airflow",
     "depends_on_past": False,
     "start_date": datetime(2024, 1, 1),
-    "retries": 1,
+    "retries": 3,
 }
 
 

@@ -124,16 +124,29 @@ def load_data():
 
     data_loader = LoaderFactory.get_loader(dwh_db_type)
 
-    df = pd.read_csv(csv_path, quotechar='"')
+    chunk_size = 10000000  # Number of rows per chunk
 
-    data_loader.load_data(df, target_schema, target_table, url.database, url.username, url.password, url.host, url.port)
+    # Read and process the CSV file in chunks
+    for chunk in pd.read_csv(csv_path, quotechar='"', low_memory=False, chunksize=chunk_size):
+        # Load the current chunk into the database
+        pd.read_csv(csv_path).info()
+        data_loader.load_data(
+            chunk,  # Pass the current chunk
+            target_schema,
+            target_table,
+            url.database,
+            url.username,
+            url.password,
+            url.host,
+            url.port
+        )
 
 
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
     "start_date": datetime(2024, 1, 1),
-    "retries": 1,
+    "retries": 3,
 }
 
 with DAG(
