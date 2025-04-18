@@ -27,7 +27,7 @@ def extract_transform_listings():
 
     if target_table not in inspector.get_table_names(schema=target_schema):
         create_listings_table(target_db_connection_string, target_schema, target_table)
-
+    log = {}
     for continent in [d.name for d in continent_path.iterdir() if d.is_dir()]:
         countries_path = continent_path.joinpath(continent)
         countries = [d.name for d in countries_path.iterdir() if d.is_dir()]
@@ -76,7 +76,11 @@ def extract_transform_listings():
                                        "host_acceptance_rate": "host_acceptance_rate_percentage"}, inplace=True)
 
                     # Lower categorical variables
-                    df["source"] = df["source"].astype(str).str.lower()
+                    try:
+                        df["source"] = df["source"].astype(str).str.lower()
+                    except:
+                        print(country, province, city)
+
                     df["host_response_time"] = df["host_response_time"].astype(str).str.lower()
                     df["property_type"] = df["property_type"].astype(str).str.lower()
                     df["room_type"] = df["room_type"].astype(str).str.lower()
@@ -106,40 +110,55 @@ def extract_transform_listings():
                             "maximum_nights_avg_ntm"]
                     )
 
-                    # Load to target
-                    csv_path = os.path.join(os.getenv("STG_CLEANSED_DATA_PATH"), f"{target_table}.csv")
-                    file_exists = os.path.exists(csv_path)
-                    df.to_csv(csv_path, mode='a', index=False, header=not file_exists, na_rep="NULL")
 
+                    log[(country, province, city)] = []
+                    try:
+                        df["availability_eoy"]
+                        log[(country, province, city)].append("availability_eoy")
+                    except:
+                        pass
 
-def load_data():
-    target_db_connection_string = os.getenv("DWH_CONN_STRING")
-    target_table = os.getenv("LISTINGS_STG_TABLE_NAME")
-    csv_path = os.getenv("STG_CLEANSED_DATA_PATH")
-    csv_path = os.path.join(csv_path, f"{target_table}.csv")
-    target_schema = os.getenv("STG_SCHEMA")
-    dwh_db_type = os.getenv("DWH_DB_TYPE")
+                    try:
+                        df["number_of_reviews_ly"]
+                        log[(country, province, city)].append("number_of_reviews_ly")
+                    except:
+                        pass
 
-    url = make_url(target_db_connection_string)
+                    try:
+                        df["estimated_occupancy_l365d"]
+                        log[(country, province, city)].append("estimated_occupancy_l365d")
+                    except:
+                        pass
 
-    data_loader = LoaderFactory.get_loader(dwh_db_type)
+                    try:
+                        df["estimated_revenue_l365d"]
+                        log[(country, province, city)].append("estimated_revenue_l365d")
+                    except:
+                        pass
 
-    chunk_size = 10000000  # Number of rows per chunk
+                    try:
+                        df = df.drop( columns =["availability_eoy"])
+                        df = df.drop( columns =["number_of_reviews_ly"])
+                        df = df.drop( columns =["estimated_occupancy_l365d"])
+                        df = df.drop( columns =["estimated_revenue_l365d"])
+                    except:
+                        pass
 
-    # Read and process the CSV file in chunks
-    for chunk in pd.read_csv(csv_path, quotechar='"', low_memory=False, chunksize=chunk_size):
-        # Load the current chunk into the database
-        pd.read_csv(csv_path).info()
-        data_loader.load_data(
-            chunk,  # Pass the current chunk
-            target_schema,
-            target_table,
-            url.database,
-            url.username,
-            url.password,
-            url.host,
-            url.port
-        )
+                    dwh_db_type = os.getenv("DWH_DB_TYPE")
+                    data_loader = LoaderFactory.get_loader(dwh_db_type)
+                    url = make_url(target_db_connection_string)
+                    data_loader.load_data(
+                        df,  # Pass the current chunk
+                        target_schema,
+                        target_table,
+                        url.database,
+                        url.username,
+                        url.password,
+                        url.host,
+                        url.port
+                    )
+
+    print([i[0] for i in log.items() if len(i[1]) == 4])
 
 
 default_args = {
@@ -157,6 +176,6 @@ with DAG(
 ) as dag:
 
     extract_transform_listings = PythonOperator(task_id="stg_listing_extract_transform", python_callable=extract_transform_listings)
-    load_data_listings = PythonOperator(task_id="stg_listing_load", python_callable=load_data)
+    # load_data_listings = PythonOperator(task_id="stg_listing_load", python_callable=load_data)
 
-    extract_transform_listings >> load_data_listings
+    extract_transform_listings

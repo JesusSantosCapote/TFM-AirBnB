@@ -50,38 +50,19 @@ def extract_transform_reviews():
                     df["date"] = df["date"].astype(str)
 
                     #Load to target
-                    file_exists = os.path.exists(reviews_file_path)
-                    df.to_csv(reviews_file_path, mode='a', index=False, header=not file_exists)
-
-
-def load_data():
-    target_db_connection_string = os.getenv("DWH_CONN_STRING")
-    target_table = os.getenv("REVIEWS_STG_TABLE_NAME")
-    csv_path = os.getenv("STG_CLEANSED_DATA_PATH")
-    csv_path = os.path.join(csv_path, f"{target_table}.csv")
-    target_schema = os.getenv("STG_SCHEMA")
-    dwh_db_type = os.getenv("DWH_DB_TYPE")
-
-    url = make_url(target_db_connection_string)
-
-    data_loader = LoaderFactory.get_loader(dwh_db_type)
-
-    chunk_size = 1000000  # Number of rows per chunk
-
-    # Read and process the CSV file in chunks
-    for chunk in pd.read_csv(csv_path, quotechar='"', low_memory=False, chunksize=chunk_size):
-        # Load the current chunk into the database
-        pd.read_csv(csv_path).info()
-        data_loader.load_data(
-            chunk,  # Pass the current chunk
-            target_schema,
-            target_table,
-            url.database,
-            url.username,
-            url.password,
-            url.host,
-            url.port
-        )
+                    dwh_db_type = os.getenv("DWH_DB_TYPE")
+                    data_loader = LoaderFactory.get_loader(dwh_db_type)
+                    url = make_url(target_db_connection_string)
+                    data_loader.load_data(
+                        df,  # Pass the current chunk
+                        target_schema,
+                        target_table,
+                        url.database,
+                        url.username,
+                        url.password,
+                        url.host,
+                        url.port
+                    )
 
 
 default_args = {
@@ -100,6 +81,6 @@ with DAG(
 ) as dag:
 
     extract_transform_reviews = PythonOperator(task_id="stg_reviews_extract_transform", python_callable=extract_transform_reviews)
-    load_data_reviews = PythonOperator(task_id="stg_reviews_load", python_callable=load_data)
+    # load_data_reviews = PythonOperator(task_id="stg_reviews_load", python_callable=load_data)
 
-    extract_transform_reviews >> load_data_reviews
+    extract_transform_reviews

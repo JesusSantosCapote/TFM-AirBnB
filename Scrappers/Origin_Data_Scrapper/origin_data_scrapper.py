@@ -11,6 +11,7 @@ def download_data():
         os.makedirs(PWD)
 
     response = requests.get(URL)
+    response.encoding = 'utf-8'
 
     if response.status_code == 200:
         soup = BeautifulSoup(response.text, 'html.parser')
