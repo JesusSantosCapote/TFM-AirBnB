@@ -153,6 +153,24 @@ def create_calendar_table(db_url, schema_name, table_name):
     metadata.create_all(engine)
 
 
+def create_listing_calendar_table(db_url, schema_name, table_name):
+    engine = create_engine(db_url)
+    metadata = MetaData(schema=schema_name)  # Especificar el esquema
+
+    listing_calendar_table = Table(
+        table_name, metadata,
+        Column("listing_id", BigInteger, primary_key=True),
+        Column("date", String(255), nullable=True),
+        Column("available", Boolean, nullable=True),
+        Column("price_dollar", Numeric, nullable=True),
+        Column("minimum_nights", Numeric, nullable=True),
+        Column("maximum_nights", Numeric, nullable=True)
+    )
+
+    # Crear la tabla en el esquema especificado
+    metadata.create_all(engine)
+
+
 # def load_csv_mysql(db_url, table_name, csv_path):
 #     # Parsear la URL manualmente (si es un string de conexión)
 #     url = make_url(db_url)

@@ -6,31 +6,30 @@ import os
 from pathlib import Path
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.engine.url import make_url
-from utils import create_reviews_table
+from utils import create_listing_calendar_table
 from loader_factory import LoaderFactory
 
 
-def stg_reviews_to_dwh_reviews():
+def stg_calendar_to_dwh_listing_calendar():
     target_db_connection_string = os.getenv("DWH_CONN_STRING")
     target_schema = os.getenv("DWH_SCHEMA")
-    target_table = os.getenv("REVIEWS_STG_TABLE_NAME")
+    target_table = os.getenv("CALENDAR_DWH_TABLE_NAME")
 
     engine = create_engine(target_db_connection_string)
 
     inspector = inspect(engine)
 
     if target_table not in inspector.get_table_names(schema=target_schema):
-        create_reviews_table(target_db_connection_string, target_schema, target_table)
+        create_listing_calendar_table(target_db_connection_string, target_schema, target_table)
 
     query = f"SELECT * FROM {target_schema}.{target_table};"
 
     df = pd.read_sql(query, engine)
 
-    df = df.drop(columns=['reviewer_id', 'id'])
+    df = df.drop(columns=['adjusted_price_dollar'])
 
-    df = df.dropna(subset=['listing_id', 'date'])
+    df = df.dropna(subset=['minimum_nights', 'maximum_nights'])
 
-    df['comments'] = df['comments'].fillna('unknown')
 
     #Load to target
     dwh_db_type = os.getenv("DWH_DB_TYPE")
