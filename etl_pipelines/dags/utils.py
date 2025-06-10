@@ -171,6 +171,65 @@ def create_listing_calendar_table(db_url, schema_name, table_name):
     metadata.create_all(engine)
 
 
+def create_listing_dwh_table(db_url, schema_name, table_name):
+    engine = create_engine(db_url)
+    metadata = MetaData(schema=schema_name)
+
+    listng_table = Table(
+        table_name, metadata,
+        Column("id", BigInteger, primary_key=True),
+        Column("listing_url", String(2083)),
+        Column("scrape_id", BigInteger),
+        Column("last_scraped", Date),
+        Column("source", String(2083)),
+        Column("name", String(2083)),
+        Column("host_id", BigInteger),
+        Column("host_since", Date),
+        Column("neighbourhood_cleansed", String(2083)),
+        Column("latitude", Numeric),
+        Column("longitude", Numeric),
+        Column("property_type", String(2083)),
+        Column("room_type", String(2083)),
+        Column("accommodates", Integer),
+        Column("bathrooms", Numeric),
+        Column("bathrooms_text", String(2083)),
+        Column("bedrooms", Integer),
+        Column("beds", Numeric),
+        Column("amenities", Text),
+        Column("price_dollar", Numeric),
+        Column("minimum_nights", Integer),
+        Column("maximum_nights", Integer),
+        Column("has_availability", Integer, nullable=True),
+        Column("availability_30", Integer),
+        Column("availability_60", Integer),
+        Column("availability_90", Integer),
+        Column("availability_365", Integer),
+        Column("calendar_last_scraped", Date),
+        Column("number_of_reviews", Integer),
+        Column("number_of_reviews_ltm", Integer),
+        Column("number_of_reviews_l30d", Integer),
+        Column("first_review", Date),
+        Column("last_review", Date),
+        Column("review_scores_rating", Numeric),
+        Column("review_scores_accuracy", Numeric),
+        Column("review_scores_cleanliness", Numeric),
+        Column("review_scores_checkin", Numeric),
+        Column("review_scores_communication", Numeric),
+        Column("review_scores_location", Numeric),
+        Column("review_scores_value", Numeric),
+        Column("license", String(2083)),
+        Column("instant_bookable", Integer, nullable=True),
+        Column("reviews_per_month", Numeric),
+        Column("city", String(255)),
+        Column("province", String(255)),
+        Column("country", String(255)),
+        Column("continent", String(255)),
+        Column("etl_loaded_at", DateTime(255))
+    )
+
+    metadata.create_all(engine)
+
+
 # def load_csv_mysql(db_url, table_name, csv_path):
 #     # Parsear la URL manualmente (si es un string de conexión)
 #     url = make_url(db_url)
