@@ -283,37 +283,46 @@ def create_geography_tables(db_url, schema_name):
 
     # Crear todas las tablas
     metadata.create_all(engine)
-    return engine
 
 
-# def load_csv_mysql(db_url, table_name, csv_path):
-#     # Parsear la URL manualmente (si es un string de conexión)
-#     url = make_url(db_url)
+def create_amenities_table(db_url, schema_name):
+    engine = create_engine(db_url)
+    metadata = MetaData(schema=schema_name)
 
-#     # Conectar a la base de datos
-#     conn = pymysql.connect(
-#         host=url.host,
-#         user=url.username,
-#         password=url.password,
-#         database=url.database,
-#         port=url.port or 3306,  # Usar puerto 3306 por defecto si no está en la URL
-#         local_infile=True  # Permitir LOAD DATA LOCAL INFILE
-#     )
+    table_name = os.getenv("AMENITIE_TABLE_NAME")
 
-#     cursor = conn.cursor()
+    inspector = inspect(engine)
 
-#     # Ejecutar el comando para cargar datos
-#     sql = f"""
-#         LOAD DATA LOCAL INFILE '{csv_path}' 
-#         INTO TABLE {table_name} 
-#         FIELDS TERMINATED BY ',' 
-#         ENCLOSED BY '"'
-#         LINES TERMINATED BY '\n'
-#         IGNORE 1 LINES;
-#         """
-    
-#     cursor.execute(sql)
-#     conn.commit()
-    
-#     cursor.close()
-#     conn.close()
+    if table_name not in inspector.get_table_names(schema=schema_name):
+        amenities_table = Table(
+            table_name, metadata,
+            Column('amenitie_id', Integer, primary_key=True, autoincrement=True),
+            Column('name', String(255), nullable=False)
+        )
+
+    metadata.create_all(engine)
+
+
+def create_amentie_listing_table(db_url, schema_name):
+    engine = create_engine(db_url)
+    metadata = MetaData(schema=schema_name)
+
+    listing_table_name = target_table = os.getenv("LISTINGS_DWH_TABLE_NAME")
+    amenitie_table_name = os.getenv("AMENITIE_TABLE_NAME")
+    amenitie_listing_table_name = os.getenv("AMENITIE_LISTING_TABLE_NAME")
+
+    inspector = inspect(engine)
+
+    if amenitie_listing_table_name not in inspector.get_table_names(schema=schema_name):
+        amenitie_listing_table = Table(
+            amenitie_listing_table_name, metadata,
+            Column('amenitie_id', Integer, 
+                   ForeignKey(f'{schema_name}.{amenitie_table_name}.amenitie_id'),
+                   primary_key=True),
+            
+            Column('listing_id', Integer, 
+                   ForeignKey(f'{schema_name}.{listing_table_name}.id'),
+                   primary_key=True)
+        )
+
+    metadata.create_all(engine)

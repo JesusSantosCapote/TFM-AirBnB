@@ -424,7 +424,7 @@ with DAG(
             password=url.password
         )
 
-        batch_size = 10000
+        batch_size = 100000
 
         extract_schema = os.getenv("STG_SCHEMA")
 
@@ -438,7 +438,7 @@ with DAG(
         processed_records = 0
         batch_number = 0
 
-        while processed_records < 30000: #TODO:Cambia por total records
+        while processed_records < total_records: #TODO:Cambia por total records
             batch_number += 1
             offset = processed_records
             
