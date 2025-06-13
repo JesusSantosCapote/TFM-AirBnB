@@ -1,7 +1,9 @@
 from sqlalchemy import (
-    create_engine, MetaData, Table, Column, Integer, BigInteger, String, Text, Date, Numeric, Boolean, DateTime
+    create_engine, MetaData, Table, Column, Integer, BigInteger, String, Text, Date, Numeric, Boolean, DateTime, ForeignKey, inspect
 )
 import psycopg2
+from datetime import datetime
+import os
 
 def create_summary_listings_table(db_url, schema_name, table_name):
     engine = create_engine(db_url)
@@ -175,6 +177,8 @@ def create_listing_dwh_table(db_url, schema_name, table_name):
     engine = create_engine(db_url)
     metadata = MetaData(schema=schema_name)
 
+    city_table_name = os.getenv("CITY_TABLE_NAME")
+
     listng_table = Table(
         table_name, metadata,
         Column("id", BigInteger, primary_key=True),
@@ -220,14 +224,66 @@ def create_listing_dwh_table(db_url, schema_name, table_name):
         Column("license", String(2083)),
         Column("instant_bookable", Integer, nullable=True),
         Column("reviews_per_month", Numeric),
-        Column("city", String(255)),
-        Column("province", String(255)),
-        Column("country", String(255)),
-        Column("continent", String(255)),
+        Column("city_id", Integer),
         Column("etl_loaded_at", DateTime(255))
     )
 
     metadata.create_all(engine)
+
+
+def create_geography_tables(db_url, schema_name):
+    """Crear las tablas de jerarquía geográfica"""
+    engine = create_engine(db_url)
+    metadata = MetaData(schema=schema_name)
+
+    continent_table_name = os.getenv("CONTINENT_TABLE_NAME")
+    country_table_name = os.getenv("COUNTRY_TABLE_NAME")
+    province_table_name = os.getenv("PROVINCE_TABLE_NAME")
+    city_table_name = os.getenv("CITY_TABLE_NAME")
+
+    inspector = inspect(engine)
+
+    if continent_table_name not in inspector.get_table_names(schema=schema_name):
+        # Tabla continents
+        continents_table = Table(
+            continent_table_name, metadata,
+            Column('continent_id', Integer, primary_key=True, autoincrement=True),
+            Column('continent_name', String(255), unique=True, nullable=False),
+            Column('etl_loaded_at', DateTime, default=datetime.utcnow)
+        )
+
+    if country_table_name not in inspector.get_table_names(schema=schema_name):
+        # Tabla countries
+        countries_table = Table(
+            country_table_name, metadata,
+            Column('country_id', Integer, primary_key=True, autoincrement=True),
+            Column('country_name', String(255), nullable=False),
+            Column('continent_id', Integer, ForeignKey(f'{schema_name}.{continent_table_name}.continent_id')),
+            Column('etl_loaded_at', DateTime, default=datetime.utcnow)
+        )
+
+    if province_table_name not in inspector.get_table_names(schema=schema_name):
+        provinces_table = Table(
+            province_table_name, metadata,
+            Column('province_id', Integer, primary_key=True, autoincrement=True),
+            Column('province_name', String(255), nullable=False),
+            Column('country_id', Integer, ForeignKey(f'{schema_name}.{country_table_name}.country_id')),
+            Column('etl_loaded_at', DateTime, default=datetime.utcnow)
+        )
+
+    if city_table_name not in inspector.get_table_names(schema=schema_name):
+        # Tabla cities
+        cities_table = Table(
+            city_table_name, metadata,
+            Column('city_id', Integer, primary_key=True, autoincrement=True),
+            Column('city_name', String(255), nullable=False),
+            Column('province_id', Integer, ForeignKey(f'{schema_name}.{province_table_name}.province_id')),
+            Column('etl_loaded_at', DateTime, default=datetime.utcnow)
+        )
+
+    # Crear todas las tablas
+    metadata.create_all(engine)
+    return engine
 
 
 # def load_csv_mysql(db_url, table_name, csv_path):
