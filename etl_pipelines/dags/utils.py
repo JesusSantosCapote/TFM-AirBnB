@@ -316,12 +316,10 @@ def create_amentie_listing_table(db_url, schema_name):
     if amenitie_listing_table_name not in inspector.get_table_names(schema=schema_name):
         amenitie_listing_table = Table(
             amenitie_listing_table_name, metadata,
-            Column('amenitie_id', Integer, 
-                   ForeignKey(f'{schema_name}.{amenitie_table_name}.amenitie_id'),
+            Column('amenitie_id', BigInteger, 
                    primary_key=True),
             
-            Column('listing_id', Integer, 
-                   ForeignKey(f'{schema_name}.{listing_table_name}.id'),
+            Column('listing_id', BigInteger, 
                    primary_key=True)
         )
 
