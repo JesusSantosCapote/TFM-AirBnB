@@ -16,11 +16,6 @@ def extract_transform_calendar():
     target_schema = os.getenv("STG_SCHEMA")
     target_table = os.getenv("CALENDAR_STG_TABLE_NAME")
 
-    stg_clean_listing_data_path = os.getenv("STG_CLEANSED_DATA_PATH")
-    calendar_file_path = os.path.join(stg_clean_listing_data_path, f"{target_table}.csv")
-    if os.path.exists(calendar_file_path):
-        os.remove(calendar_file_path)
-
     engine = create_engine(target_db_connection_string)
 
     inspector = inspect(engine)

@@ -143,7 +143,7 @@ def create_calendar_table(db_url, schema_name, table_name):
     calendar_table = Table(
         table_name, metadata,
         Column("listing_id", BigInteger, primary_key=True),
-        Column("date", String(255), nullable=True),
+        Column("date", String(255), primary_key=True, nullable=True),
         Column("available", Boolean, nullable=True),
         Column("price_dollar", Numeric, nullable=True),
         Column("adjusted_price_dollar", Numeric, nullable=True),
@@ -323,4 +323,41 @@ def create_amentie_listing_table(db_url, schema_name):
                    primary_key=True)
         )
 
+    metadata.create_all(engine)
+
+
+def create_date_master_table(db_url, schema_name, table_name):
+    """
+    Creates the date master table in PostgreSQL
+    """
+    engine = create_engine(db_url)
+    metadata = MetaData(schema=schema_name)
+
+    inspector = inspect(engine)
+
+    # Check if table already exists
+    if table_name not in inspector.get_table_names(schema=schema_name):
+        date_master_table = Table(
+            table_name, metadata,
+            Column("date", Date, primary_key=True, nullable=False),
+            Column("date_str", String(10), nullable=False),
+            Column("year", Integer, nullable=False),
+            Column("month", Integer, nullable=False),
+            Column("day", Integer, nullable=False),
+            Column("day_of_week", Integer, nullable=False),  # 1=Monday, 7=Sunday
+            Column("day_name", String(20), nullable=False),
+            Column("month_name", String(20), nullable=False),
+            Column("quarter", Integer, nullable=False),
+            Column("week_of_year", Integer, nullable=False),
+            Column("day_of_year", Integer, nullable=False),
+            Column("is_weekend", Boolean, nullable=False, default=False),
+            Column("is_month_start", Boolean, nullable=False, default=False),
+            Column("is_month_end", Boolean, nullable=False, default=False),
+            Column("is_leap_year", Boolean, nullable=False, default=False),
+            Column("is_high_season", Boolean, nullable=True, default=False),
+            Column("is_holiday", Boolean, nullable=True, default=False),
+            Column("etl_loaded_at", DateTime, default=datetime.utcnow)
+        )
+
+    # Create the table in the specified schema
     metadata.create_all(engine)
