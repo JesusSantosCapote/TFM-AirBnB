@@ -361,3 +361,78 @@ def create_date_master_table(db_url, schema_name, table_name):
 
     # Create the table in the specified schema
     metadata.create_all(engine)
+
+
+def create_country_economics_table(db_url, schema_name, table_name):
+    engine = create_engine(db_url)
+    metadata = MetaData(schema=schema_name)
+
+    inspector = inspect(engine)
+
+    # Check if table already exists
+    if table_name not in inspector.get_table_names(schema=schema_name):
+        date_master_table = Table(
+            table_name, metadata,
+            Column("country_id", Integer),
+            Column("Current account balance (% of GDP)", Numeric, nullable=False),
+            Column("Current health expenditure (% of GDP)", Numeric, nullable=False),
+            Column("Domestic credit provided by financial sector (% of GDP)", Numeric, nullable=False),
+            Column("Domestic credit to private sector (% of GDP)", Numeric, nullable=False),
+            Column("Domestic credit to private sector by banks (% of GDP)", Numeric, nullable=False),
+            Column("Expense (% of GDP)", Numeric, nullable=False),
+            Column("Exports of goods and services (% of GDP)", Numeric, nullable=False),
+            Column("External balance on goods and services (% of GDP)", Numeric, nullable=False),
+            Column("Final consumption expenditure (% of GDP)", Numeric, nullable=False),
+            Column("Foreign direct investment, net inflows (% of GDP)", Numeric, nullable=False),
+            Column("Foreign direct investment, net outflows (% of GDP)", Numeric, nullable=False),
+            Column("GDP (current US$)", Numeric, nullable=False),
+            Column("GDP growth (annual %)", Numeric, nullable=False),
+            Column("GDP per capita (constant 2015 US$)", Numeric, nullable=False),
+            Column("GDP per capita growth (annual %)", Numeric, nullable=False),
+            Column("GDP per capita, PPP (constant 2021 international $)", Numeric, nullable=False),
+            Column("GDP per person employed (constant 2021 PPP $)", Numeric, nullable=False),
+            Column("Gross capital formation (% of GDP)", Numeric, nullable=False),
+            Column("Gross domestic savings (% of GDP)", Numeric, nullable=False),
+            Column("Imports of goods and services (% of GDP)", Numeric, nullable=False),
+            Column("Inflation, GDP deflator (annual %)", Numeric, nullable=False),
+            Column("Industry (including construction), value added (% of GDP)", Numeric, nullable=False),
+            Column("Tax revenue (% of GDP)", Numeric, nullable=False),
+            Column("Trade (% of GDP)", Numeric, nullable=False),
+            Column("Water productivity, total (constant 2015 US$ GDP per cubic meter of total freshwater withdrawal)", Numeric, nullable=False),
+            Column("year", Integer, nullable=False),
+            Column("etl_loaded_at", DateTime, default=datetime.utcnow)
+        )
+
+    # Create the table in the specified schema
+    metadata.create_all(engine)
+
+
+def create_stg_country_economics_table(db_url, schema_name, table_name):
+    engine = create_engine(db_url)
+    metadata = MetaData(schema=schema_name)
+
+    inspector = inspect(engine)
+
+    # Check if table already exists
+    if table_name not in inspector.get_table_names(schema=schema_name):
+        date_master_table = Table(
+            table_name, metadata,
+            Column("country_name", String(255), primary_key=True),
+            Column("country_code", String(255)),
+            Column("series_name", String(255)),
+            Column("series_code", String(255)),
+            Column("yr_2014", Numeric),
+            Column("yr_2015", Numeric),
+            Column("yr_2016", Numeric),
+            Column("yr_2017", Numeric),
+            Column("yr_2018", Numeric),
+            Column("yr_2019", Numeric),
+            Column("yr_2020", Numeric),
+            Column("yr_2021", Numeric),
+            Column("yr_2022", Numeric),
+            Column("yr_2023", Numeric),
+            Column("etl_loaded_at", DateTime, default=datetime.utcnow)
+        )
+
+    # Create the table in the specified schema
+    metadata.create_all(engine)
