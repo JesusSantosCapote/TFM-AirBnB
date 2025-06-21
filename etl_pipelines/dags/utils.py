@@ -436,3 +436,22 @@ def create_stg_country_economics_table(db_url, schema_name, table_name):
 
     # Create the table in the specified schema
     metadata.create_all(engine)
+
+
+def create_stg_arrivals_table(db_url, schema_name, table_name):
+    engine = create_engine(db_url)
+    metadata = MetaData(schema=schema_name)
+
+    inspector = inspect(engine)
+
+    # Check if table already exists
+    if table_name not in inspector.get_table_names(schema=schema_name):
+        date_master_table = Table(
+            table_name, metadata,
+            Column("country", String(255), primary_key=True),
+            Column("international_arrivals", Numeric),
+            Column("etl_loaded_at", DateTime, default=datetime.utcnow)
+        )
+
+    # Create the table in the specified schema
+    metadata.create_all(engine)
