@@ -18,7 +18,7 @@ default_args = {
 with DAG(
     'dwh_update_country_metrics',
     default_args=default_args,
-    schedule_interval=None,  # Ejecutar manualmente
+    schedule_interval="@daily",
     catchup=False,
 ) as dag:
     
