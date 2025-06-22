@@ -455,3 +455,26 @@ def create_stg_arrivals_table(db_url, schema_name, table_name):
 
     # Create the table in the specified schema
     metadata.create_all(engine)
+
+
+def create_stg_crime_index_table(db_url, schema_name, table_name):
+    engine = create_engine(db_url)
+    metadata = MetaData(schema=schema_name)
+
+    inspector = inspect(engine)
+
+    # Check if table already exists
+    if table_name not in inspector.get_table_names(schema=schema_name):
+        date_master_table = Table(
+            table_name, metadata,
+            Column("country", String(255)),
+            Column("city", String(255), primary_key=True),
+            Column("crime_index", Numeric),
+            Column("safety_index", Numeric),
+            Column("numbeo_crime_level", String(255)),
+            Column("numbeo_link", String(255)),
+            Column("etl_loaded_at", DateTime, default=datetime.utcnow)
+        )
+
+    # Create the table in the specified schema
+    metadata.create_all(engine)
