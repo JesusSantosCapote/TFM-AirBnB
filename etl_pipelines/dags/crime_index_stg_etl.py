@@ -30,9 +30,9 @@ with DAG(
         try:
             create_stg_crime_index_table(target_db_connection_string, target_schema, target_table)
         except Exception as e:
-            print(f"Unable to create country economics table: {e}")
+            print(f"Unable to create crime index table: {e}")
 
-        print("Country Economics table succefully created")
+        print("Crime index table succefully created")
 
     
     def load_batch_to_dwh(df_batch, connection_string, schema, table):
