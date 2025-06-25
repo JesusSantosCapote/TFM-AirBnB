@@ -128,7 +128,6 @@ def create_reviews_table(db_url, schema_name, table_name):
         Column("listing_id", BigInteger, primary_key=True),
         Column("id", BigInteger, nullable=True),
         Column("date", String(255), nullable=True),
-        Column("reviewer_id", BigInteger, nullable=True),
         Column("comments", Text, nullable=True)
     )
 
@@ -500,3 +499,42 @@ def create_stg_surface_table(db_url, schema_name, table_name):
 
     # Create the table in the specified schema
     metadata.create_all(engine)
+
+
+def create_san_francisco_model_table(db_url, schema_name, table_name):
+    """
+    Crea la tabla para almacenar los resultados del modelo San Francisco usando SQLAlchemy
+    """
+    engine = create_engine(db_url)
+    metadata = MetaData(schema=schema_name)
+    inspector = inspect(engine)
+    
+    # Check if table already exists
+    if table_name not in inspector.get_table_names(schema=schema_name):
+        san_francisco_model_table = Table(
+            table_name, metadata,
+            
+            Column("listing_id", BigInteger, primary_key=True, nullable=False),
+            Column("year", Integer, primary_key=True, nullable=False),
+            Column("calculation_date", DateTime, nullable=False),
+            
+            Column("total_reviews_year", BigInteger),
+            Column("avg_monthly_reviews", Numeric),
+            
+            Column("review_rate_assumed", Numeric),
+            Column("avg_stay_nights_assumed", Numeric),
+            Column("estimated_bookings", Numeric),
+            Column("estimated_occupied_nights", Numeric),
+            Column("occupancy_rate", Numeric),
+            
+            Column("is_occupancy_capped", Boolean),
+            Column("max_occupancy_rate_applied", Numeric),
+            
+            Column("estimated_annual_revenue", Numeric),
+            Column("revenue_per_review", Numeric),
+            
+            Column("etl_loaded_at", DateTime, default=datetime.utcnow)
+        )
+        
+    metadata.create_all(engine)
+    

@@ -108,7 +108,7 @@ with DAG(
             if df_batch.empty:
                 break
 
-            df_batch = df_batch.drop(columns=['reviewer_id', 'id'])
+            df_batch = df_batch.drop(columns=['reviewer_id'])
 
             df_batch = df_batch.dropna(subset=['listing_id', 'date'])
 

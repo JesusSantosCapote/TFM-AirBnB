@@ -28,6 +28,10 @@ with DAG(
 
         country_table_name = os.getenv("COUNTRY_TABLE_NAME")
         province_table_name = os.getenv("PROVINCE_TABLE_NAME")
+        crime_index_table_name = os.getenv("CRIME_STG_TABLE_NAME")
+        surface_table_name = os.getenv("CITY_SURFACE_TABLE_NAME")
+
+        extract_schema = os.getenv("STG_SCHEMA")
         
         # Crear conexión con psycopg2
         conn = psycopg2.connect(
@@ -59,13 +63,11 @@ with DAG(
                     print(f"Error agregando columna '{column_name}': {e}")
                     conn.rollback()
             
-            base_path = os.getenv("EXTERNAL_DATA_PATH")
+            surface_query = f"SELECT * FROM {extract_schema}.{surface_table_name}"
+            surface_df = pd.read_sql_query(surface_query, conn)
             
-            superficie_path = os.path.join(base_path, 'superficie_ciudad_km2_clean.csv')
-            superficie_df = pd.read_csv(superficie_path)
-            
-            crime_path = os.path.join(base_path, 'crime_index_clean.csv')
-            crime_df = pd.read_csv(crime_path)
+            crime_query = f"SELECT * FROM {extract_schema}.{crime_index_table_name}"
+            crime_df = pd.read_sql_query(crime_query, conn)
             
             city_query = f"""
                 SELECT c.city_id, c.city_name, co.country_name 
@@ -88,21 +90,21 @@ with DAG(
             print("Actualizando datos de superficie...")
             superficie_updates = 0
             
-            for _, superficie_row in superficie_df.iterrows():
+            for _, surface_row in surface_df.iterrows():
                 # Normalizar nombres para matching
-                csv_city = superficie_row['city']
-                csv_country = superficie_row['country']
+                stg_city = surface_row['city']
+                stg_country = surface_row['country']
                 
                 # Buscar coincidencias en la tabla city
                 for city_row in city_data:
-                    db_city = city_row['city_name']
-                    db_country = city_row['country_name'].lower()
+                    dwh_city = city_row['city_name']
+                    dwh_country = city_row['country_name']
                     
                     # Matching por ciudad y país
-                    if csv_city == db_city and csv_country == db_country:
+                    if stg_city == dwh_city and stg_country == dwh_country:
                         try:
                             # Limpiar el valor de km (remover comas y convertir)
-                            km_value = str(superficie_row['km']).replace(',', '').replace('"', '')
+                            km_value = str(surface_row['km']).replace(',', '').replace('"', '')
                             km_float = float(km_value)
                             
                             update_query = f"""
@@ -122,7 +124,7 @@ with DAG(
                             break
                             
                         except (ValueError, TypeError) as e:
-                            print(f"Error procesando superficie para {superficie_row['city']}: {e}")
+                            print(f"Error procesando superficie para {surface_row['city']}: {e}")
             
             conn.commit()
             print(f"Total actualizaciones de superficie: {superficie_updates}")
@@ -133,16 +135,16 @@ with DAG(
             
             for _, crime_row in crime_df.iterrows():
                 # Normalizar nombres para matching
-                csv_city = crime_row['city']
-                csv_country = crime_row['country']
+                stg_city = crime_row['city']
+                stg_country = crime_row['country']
                 
                 # Buscar coincidencias en la tabla city
                 for city_row in city_data:
-                    db_city = city_row['city_name']
-                    db_country = city_row['country_name'].lower()
+                    dwh_city = city_row['city_name']
+                    dwh_country = city_row['country_name']
                     
                     # Matching por ciudad y país
-                    if csv_city == db_city and csv_country == db_country:
+                    if stg_city == dwh_city and stg_country == dwh_country:
                         try:
                             # Procesar valores de criminalidad
                             crime_index = None
@@ -242,10 +244,28 @@ with DAG(
         mode='poke'
     )
 
+    wait_for_crime_stg_dag = ExternalTaskSensor(
+        task_id='wait_for_crime_stg_dag',
+        external_dag_id='stg_etl_crime_index',
+        external_task_id=None,
+        timeout=600,
+        poke_interval=60,
+        mode='poke'
+    )
+
+    wait_for_surface_stg_dag = ExternalTaskSensor(
+        task_id='wait_for_surface_stg_dag',
+        external_dag_id='stg_etl_surface',
+        external_task_id=None,
+        timeout=600,
+        poke_interval=60,
+        mode='poke'
+    )
+
     update_city_metrics_task = PythonOperator(
         task_id='update_city_metrics',
         python_callable=update_city_metrics,
         dag=dag
     )
 
-    wait_for_dwh_listing_dag >> update_city_metrics_task
+    wait_for_dwh_listing_dag >> wait_for_crime_stg_dag >> wait_for_surface_stg_dag >> update_city_metrics_task

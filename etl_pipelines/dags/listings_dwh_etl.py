@@ -378,7 +378,7 @@ with DAG(
         print(f"Batch cargado exitosamente: {len(df_batch)} registros")
 
 
-    def transform_batch(df_batch):
+    def transform_batch(df_batch, exchange_df):
         df_batch = df_batch.drop(columns=["calculated_host_listings_count", "calculated_host_listings_count_entire_homes", "calculated_host_listings_count_private_rooms", "calculated_host_listings_count_shared_rooms", "description", "neighborhood_overview", "picture_url", "host_url", "host_response_time", "host_response_rate_percentage", "host_acceptance_rate_percentage", "host_is_superhost", "host_listings_count", "host_total_listings_count", "host_verifications", "host_has_profile_pic", "host_identity_verified", "neighbourhood", "neighbourhood_group_cleansed", "calendar_updated"])
 
         # Impute baths
@@ -403,6 +403,15 @@ with DAG(
         df_batch["bathrooms_text"] = df_batch["bathrooms_text"].fillna("unknown")
 
         df_batch = df_batch.dropna()
+
+        df_batch = df_batch.reset_index(drop=True)
+
+        for idx, row in df_batch.iterrows():
+            country = row["country"]
+            try:
+                df_batch.loc[idx, "price_dollar"] = df_batch.loc[idx, "price_dollar"] / exchange_df.loc[country, 'usd_exchange_rate']
+            except Exception as e:
+                print(f"Error in change price column: country:{country}, exchange: {exchange_df.loc[country, 'usd_exchange_rate']}")
 
         return df_batch
 
@@ -458,11 +467,16 @@ with DAG(
                 break
 
             # Ejecutar normalización
-            df_batch_normalized, city_mapping = normalize_geography_etl(target_db_connection_string, target_schema, df_batch)
+            exchange_data_path = os.path.join(os.getenv("EXTERNAL_DATA_PATH"), "usd_exchange.csv")
+            exchange_df = pd.read_csv(exchange_data_path, sep=";")
+            exchange_df.drop(columns=['country_name.1'], inplace=True)
+            exchange_df.set_index('country_name', inplace=True)
 
-            df_transformed = transform_batch(df_batch_normalized)
+            df_transformed = transform_batch(df_batch, exchange_df)
 
-            load_batch_to_dwh(df_transformed, target_db_connection_string, target_schema, target_table)
+            df_batch_normalized, city_mapping = normalize_geography_etl(target_db_connection_string, target_schema, df_transformed)
+
+            load_batch_to_dwh(df_batch_normalized, target_db_connection_string, target_schema, target_table)
 
             processed_records += len(df_batch)
             print(f"Batch {batch_number} completado. Procesados: {processed_records}/{total_records}")
