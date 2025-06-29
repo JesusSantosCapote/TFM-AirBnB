@@ -45,7 +45,7 @@ def extract_transform_reviews():
 
                     df = pd.read_csv(review_path, compression='gzip', quotechar='"')
 
-                    df = df.drop(columns=["reviewer_name"])
+                    df = df.drop(columns=["reviewer_name", "reviewer_id"])
 
                     df["date"] = df["date"].astype(str)
 

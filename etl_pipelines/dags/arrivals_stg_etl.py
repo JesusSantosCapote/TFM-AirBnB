@@ -76,17 +76,56 @@ with DAG(
             "international_arrivals.csv"
         )
 
+        # Read CSV and handle trailing comma issue
         arrivals_df = pd.read_csv(country_economics_data_path)
-
+        
+        # Debug: Print column names to understand the structure
+        print(f"Available columns: {list(arrivals_df.columns)}")
+        print(f"DataFrame shape: {arrivals_df.shape}")
+        
+        # Clean up column names and remove unnamed columns
+        arrivals_df.columns = arrivals_df.columns.str.strip()  # Remove whitespace
+        
+        # Remove columns that are unnamed or contain only NaN values
+        columns_to_remove = []
+        for col in arrivals_df.columns:
+            if col.startswith('Unnamed:') or arrivals_df[col].isna().all():
+                columns_to_remove.append(col)
+        
+        if columns_to_remove:
+            print(f"Removing columns: {columns_to_remove}")
+            arrivals_df = arrivals_df.drop(columns=columns_to_remove)
+        
+        # Remove rows that are completely empty
+        arrivals_df = arrivals_df.dropna(how='all')
+        
+        # Define columns to drop (if they exist)
         columns_to_drop = ["year", "source"]
+        existing_columns_to_drop = [col for col in columns_to_drop if col in arrivals_df.columns]
+        
+        if existing_columns_to_drop:
+            print(f"Dropping columns: {existing_columns_to_drop}")
+            arrivals_df = arrivals_df.drop(columns=existing_columns_to_drop)
 
-        arrivals_df = arrivals_df.drop(columns=columns_to_drop)
+        # Transform country column
+        if "country" in arrivals_df.columns:
+            arrivals_df["country"] = arrivals_df["country"].apply(lambda x: str(x).title())
+        else:
+            print(f"Warning: 'country' column not found. Available columns: {list(arrivals_df.columns)}")
+            raise ValueError("Country column not found in the dataset")
 
-        arrivals_df["country"] = arrivals_df["country"].apply(lambda x: str(x).title())
-
+        # Add ETL timestamp
         arrivals_df["etl_loaded_at"] = datetime.now()
+        
+        # Clean column names to be SQL-safe (remove special characters, spaces, etc.)
+        arrivals_df.columns = [col.replace(' ', '_').replace(':', '_').replace('-', '_').lower() 
+                              for col in arrivals_df.columns]
+        
+        print(f"Final columns: {list(arrivals_df.columns)}")
+        print(f"Final DataFrame shape: {arrivals_df.shape}")
 
         load_batch_to_dwh(arrivals_df, target_db_connection_string, target_schema, target_table)
+
 
 
     create_arrivals_table_task = PythonOperator(

@@ -78,9 +78,14 @@ with DAG(
         with open(amenities_regex_path, 'r', encoding='utf-8') as f:
             amenities_regex_dict = json.load(f)
 
+        amenities_macro_group = {}
+        amenities_macro_group_path = os.path.join(os.getenv("PROCESSED_DATA_PATH"), "macro_group.json")
+        with open(amenities_macro_group_path, 'r', encoding='utf-8') as f:
+            amenities_macro_group = json.load(f)
+
         amenities_list = []    
         for amenitie_name, _ in amenities_regex_dict.items():
-            amenities_list.append({'name': amenitie_name})
+            amenities_list.append({'name': amenitie_name, 'group_name': amenities_macro_group[amenitie_name]})
         
         amenitie_df = pd.DataFrame(amenities_list)
 

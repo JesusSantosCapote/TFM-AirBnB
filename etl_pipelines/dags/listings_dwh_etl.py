@@ -409,7 +409,7 @@ with DAG(
         for idx, row in df_batch.iterrows():
             country = row["country"]
             try:
-                df_batch.loc[idx, "price_dollar"] = df_batch.loc[idx, "price_dollar"] / exchange_df.loc[country, 'usd_exchange_rate']
+                df_batch.loc[idx, "price_dollar"] = df_batch.loc[idx, "price_dollar"] * exchange_df.loc[country, 'usd_exchange_rate']
             except Exception as e:
                 print(f"Error in change price column: country:{country}, exchange: {exchange_df.loc[country, 'usd_exchange_rate']}")
 

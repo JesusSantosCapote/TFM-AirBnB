@@ -77,7 +77,7 @@ with DAG(
         extract_schema = os.getenv("STG_SCHEMA")
         extract_table = os.getenv("REVIEWS_DWH_TABLE_NAME")
 
-        batch_size = int(os.getenv("BATCH_SIZE"))
+        batch_size = 1000000
 
         count_query = f"SELECT COUNT(*) FROM {extract_schema}.{target_table};"
         total_records = pd.read_sql_query(count_query, conn).iloc[0, 0]
@@ -98,7 +98,6 @@ with DAG(
             # Query con LIMIT y OFFSET para batch
             batch_query = f"""
                 SELECT * FROM {extract_schema}.{extract_table} 
-                ORDER BY id 
                 LIMIT {batch_size} OFFSET {offset};
             """
             
@@ -107,8 +106,6 @@ with DAG(
             
             if df_batch.empty:
                 break
-
-            df_batch = df_batch.drop(columns=['reviewer_id'])
 
             df_batch = df_batch.dropna(subset=['listing_id', 'date'])
 

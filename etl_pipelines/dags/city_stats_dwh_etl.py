@@ -30,6 +30,7 @@ with DAG(
         province_table_name = os.getenv("PROVINCE_TABLE_NAME")
         crime_index_table_name = os.getenv("CRIME_STG_TABLE_NAME")
         surface_table_name = os.getenv("CITY_SURFACE_TABLE_NAME")
+        regulation_table_name = os.getenv("CITY_STG_REGULATION_TABLE_NAME")
 
         extract_schema = os.getenv("STG_SCHEMA")
         
@@ -51,6 +52,7 @@ with DAG(
                 'crime_index': 'NUMERIC(5,2)',
                 'safety_index': 'NUMERIC(5,2)', 
                 'numbeo_crime_level': 'VARCHAR(50)',
+                'regulation_score': 'NUMERIC(5,2)'
             }
             
             for column_name, column_type in new_columns.items():
@@ -68,6 +70,9 @@ with DAG(
             
             crime_query = f"SELECT * FROM {extract_schema}.{crime_index_table_name}"
             crime_df = pd.read_sql_query(crime_query, conn)
+
+            regulation_query = f"SELECT * FROM {extract_schema}.{regulation_table_name}"
+            regulation_df = pd.read_sql_query(regulation_query, conn)
             
             city_query = f"""
                 SELECT c.city_id, c.city_name, co.country_name 
@@ -191,6 +196,46 @@ with DAG(
             
             conn.commit()
             print(f"Total actualizaciones de criminalidad: {crime_updates}")
+
+            regulation_updates = 0
+            
+            for _, regulation_row in regulation_df.iterrows():
+                # Normalizar nombres para matching
+                stg_city = regulation_row['city_name']
+                stg_country = regulation_row['country_name']
+                
+                # Buscar coincidencias en la tabla city
+                for city_row in city_data:
+                    dwh_city = city_row['city_name']
+                    dwh_country = city_row['country_name']
+                    
+                    # Matching por ciudad y país
+                    if stg_city == dwh_city and stg_country == dwh_country:
+                        try:
+                            # Limpiar el valor de km (remover comas y convertir)
+                            regulation_score = int(regulation_row["regulation_score"])
+                            
+                            update_query = f"""
+                                UPDATE {schema_name}.{city_table_name} 
+                                SET 
+                                    regulation_score = %s
+                                WHERE city_id = %s
+                            """
+                            
+                            cursor.execute(update_query, (
+                                regulation_score,
+                                city_row['city_id']
+                            ))
+                            
+                            regulation_updates += 1
+                            print(f"Regulacion actualizada: {city_row['city_name']} -> {regulation_score}")
+                            break
+                            
+                        except (ValueError, TypeError) as e:
+                            print(f"Error procesando regulacion para {regulation_row['city_name']}: {e}")
+            
+            conn.commit()
+            print(f"Total actualizaciones de regulacion: {regulation_updates}")
             
             # 7. Mostrar estadísticas finales
             stats_query = f"""
@@ -198,7 +243,8 @@ with DAG(
                     COUNT(*) as total_cities,
                     COUNT(area_km2) as cities_with_area,
                     COUNT(crime_index) as cities_with_crime_data,
-                    COUNT(safety_index) as cities_with_safety_data
+                    COUNT(safety_index) as cities_with_safety_data,
+                    COUNT(regulation_score) as cities_with_regulation
                 FROM {schema_name}.{city_table_name}
             """
             
@@ -210,6 +256,7 @@ with DAG(
             print(f"Ciudades con área: {stats[1]}")
             print(f"Ciudades con datos de criminalidad: {stats[2]}")
             print(f"Ciudades con datos de seguridad: {stats[3]}")
+            print(f"Ciudades con datos de regulacion: {stats[4]}")
             
             print("✅ Actualización de métricas de ciudad completada")
             
@@ -253,6 +300,15 @@ with DAG(
         mode='poke'
     )
 
+    wait_for_regulation_stg_dag = ExternalTaskSensor(
+        task_id='wait_for_regulation_stg_dag',
+        external_dag_id='stg_etl_regulation',
+        external_task_id=None,
+        timeout=600,
+        poke_interval=60,
+        mode='poke'
+    )
+
     wait_for_surface_stg_dag = ExternalTaskSensor(
         task_id='wait_for_surface_stg_dag',
         external_dag_id='stg_etl_surface',
@@ -268,4 +324,4 @@ with DAG(
         dag=dag
     )
 
-    wait_for_dwh_listing_dag >> wait_for_crime_stg_dag >> wait_for_surface_stg_dag >> update_city_metrics_task
+    wait_for_dwh_listing_dag >> wait_for_crime_stg_dag >> wait_for_regulation_stg_dag >> wait_for_surface_stg_dag >> update_city_metrics_task
